@@ -187,7 +187,7 @@ function BottomNav({tab,setTab,historyCount,onApiKey}){
   return(
     <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:"1px solid #EBEBEB",display:"flex",zIndex:200,boxShadow:"0 -4px 20px rgba(0,0,0,0.06)"}}>
       {[{id:"analyze",icon:"📊",label:"분석"},{id:"guide",icon:"📖",label:"매매가이드"},{id:"history",icon:"📁",label:"히스토리",badge:historyCount},{id:"settings",icon:"⚙️",label:"API키"}].map(item=>(
-        <button key={item.id} onClick={()=>item.id==="settings"?onApiKey():setTab(item.id)}
+        <button key={item.id} onClick={()=>setTab(item.id)}
           style={{flex:1,padding:"12px 0 14px",border:"none",background:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,position:"relative"}}>
           <div style={{position:"relative",display:"inline-block"}}>
             <span style={{fontSize:22}}>{item.icon}</span>
@@ -737,7 +737,7 @@ function App(){
   useEffect(()=>{loadHistoryList().then(l=>setHistoryCount(l.length));},[]);
 
   // API키 차단 완전 제거
-  if(showApiInput) return(<div style={{fontFamily:"'Apple SD Gothic Neo',sans-serif",background:"#F0F2F5",minHeight:"100vh",paddingBottom:80}}><ApiKeyScreen onSave={k=>{setApiKey(k);setShowApiInput(false);}}/><BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setShowApiInput(true)}/></div>);
+  // showApiInput removed - API키 탭 클릭시 인라인 처리
 
   const handleFiles=files=>{
     const arr=Array.from(files).filter(f=>f.type.startsWith("image/"));
@@ -752,7 +752,7 @@ function App(){
 
   const analyze=async()=>{
     if(!imgs.length)return;
-    if(!apiKey){setError('API 키를 먼저 입력해주세요. 위의 🔑 입력란에 Anthropic API 키를 넣으면 분석이 시작됩니다.');return;}
+    if(!apiKey){setError('API 키가 필요합니다. 하단 API키 탭에서 등록 후 분석하세요.');return;}
     setLoading(true);setError(null);setResult(null);setPct(0);setStepIdx(0);startTimer();
     try{
       const resizedAll=await Promise.all(imgs.map(img=>resizeImage(img)));
@@ -789,21 +789,28 @@ function App(){
         </div>
       </div>
       <div style={{padding:"14px",maxWidth:720,margin:"0 auto"}}><AnalysisDetail d={historyDetail.data} isDemo={false} isHistoryView={true}/></div>
-      <BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setShowApiInput(true)}/>
+      <BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setTab("settings")}/>
+    </div>
+  );
+
+  if(tab==="settings") return(
+    <div style={{fontFamily:"'Apple SD Gothic Neo',sans-serif",background:"#F0F2F5",minHeight:"100vh",paddingBottom:80}}>
+      <ApiKeyScreen onSave={k=>{setApiKey(k);setTab("analyze");}}/>
+      <BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setTab("settings")}/>
     </div>
   );
 
   if(tab==="guide") return(
     <div style={{fontFamily:"'Apple SD Gothic Neo',sans-serif",background:"#F0F2F5",minHeight:"100vh",paddingBottom:80}}>
       <TradingGuide/>
-      <BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setShowApiInput(true)}/>
+      <BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setTab("settings")}/>
     </div>
   );
 
   if(tab==="history") return(
     <div style={{fontFamily:"'Apple SD Gothic Neo',sans-serif",background:"#F0F2F5",minHeight:"100vh"}}>
       <HistoryScreen onSelect={handleHistorySelect}/>
-      <BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setShowApiInput(true)}/>
+      <BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setTab("settings")}/>
     </div>
   );
 
@@ -832,12 +839,12 @@ function App(){
             )}
           </div>
         )}
-        {imgs.length>0&&!loading&&(<>{!apiKey&&<div style={{background:"#1a1a2e",borderRadius:16,padding:"14px 16px",marginBottom:10,display:"flex",gap:10,alignItems:"center"}}><span style={{fontSize:22}}>🔑</span><div style={{flex:1}}><div style={{fontSize:12,color:"#aaa",marginBottom:4}}>Anthropic API 키 (차트 AI분석용)</div><input type="password" value={apiKey||""} placeholder="sk-ant-api..." onChange={e=>{const k=e.target.value;setApiKey(k);if(k)localStorage.setItem("neo-api-key",k);}} style={{width:"100%",background:"#16213e",border:"1px solid #333",borderRadius:10,padding:"10px 12px",color:"#fff",fontSize:13}}/></div></div>}<button onClick={analyze} style={{width:"100%",background:"#111",color:"#fff",border:"none",borderRadius:16,padding:16,fontSize:16,fontWeight:700,cursor:"pointer",marginBottom:8}}>📊 전체 {imgs.length}장 AI 분석 시작</button><button onClick={()=>{setImgs([]);setSelIdx(0);setResult(null);setError(null);setIsDemo(true);}} style={{width:"100%",background:"#F0F0F0",color:"#666",border:"none",borderRadius:16,padding:12,fontSize:14,fontWeight:600,cursor:"pointer",marginBottom:12}}>🗑 전체 초기화</button></>)}
+        {imgs.length>0&&!loading&&(<>}><span style={{fontSize:22}}>🔑</span><div style={{flex:1}}><div style={{fontSize:12,color:"#aaa",marginBottom:4}}>Anthropic API 키 (차트 AI분석용)</div><input type="password" value={apiKey||""} placeholder="sk-ant-api..." onChange={e=>{const k=e.target.value;setApiKey(k);if(k)localStorage.setItem("neo-api-key",k);}} style={{width:"100%",background:"#16213e",border:"1px solid #333",borderRadius:10,padding:"10px 12px",color:"#fff",fontSize:13}}/></div></div>}<button onClick={analyze} style={{width:"100%",background:"#111",color:"#fff",border:"none",borderRadius:16,padding:16,fontSize:16,fontWeight:700,cursor:"pointer",marginBottom:8}}>📊 전체 {imgs.length}장 AI 분석 시작</button><button onClick={()=>{setImgs([]);setSelIdx(0);setResult(null);setError(null);setIsDemo(true);}} style={{width:"100%",background:"#F0F0F0",color:"#666",border:"none",borderRadius:16,padding:12,fontSize:14,fontWeight:600,cursor:"pointer",marginBottom:12}}>🗑 전체 초기화</button></>)}
         {loading&&(<Card style={{textAlign:"center",padding:"36px 20px"}}><div style={{fontSize:40,marginBottom:12}}>📊</div><div style={{fontSize:15,fontWeight:800,marginBottom:4}}>AI가 차트를 분석 중...</div><div style={{fontSize:12,color:"#5B8DEF",fontWeight:600,marginBottom:4}}>{STEPS[Math.min(stepIdx,5)]} 중...</div><div style={{fontSize:34,fontWeight:900,marginBottom:14}}>{pct}%</div><div style={{height:8,background:"#F0F0F0",borderRadius:10,overflow:"hidden",marginBottom:16}}><div style={{height:"100%",width:pct+"%",background:"linear-gradient(90deg,#4CAF82,#5B8DEF)",borderRadius:10,transition:"width .2s"}}/></div><div style={{display:"flex",gap:4}}>{STEPS.map((s,i)=>(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><div style={{width:22,height:22,borderRadius:"50%",background:i<stepIdx?"#4CAF82":"#F0F0F0",color:i<stepIdx?"#fff":"#ccc",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700}}>{i<stepIdx?"✓":i+1}</div><div style={{fontSize:8,color:i<stepIdx?"#4CAF82":"#ccc",textAlign:"center"}}>{s}</div></div>))}</div></Card>)}
         {error&&!loading&&(<div style={{background:"#FFF0F0",borderRadius:16,padding:16,marginBottom:12,display:"flex",gap:12}}><span style={{fontSize:22}}>⚠️</span><div><div style={{fontSize:14,fontWeight:700,color:"#D43030",marginBottom:4}}>분석 실패</div><div style={{fontSize:13,color:"#D43030",marginBottom:10}}>{error}</div><button onClick={analyze} style={{background:"#D43030",color:"#fff",border:"none",borderRadius:10,padding:"8px 16px",fontSize:13,fontWeight:600,cursor:"pointer"}}>🔄 다시 시도</button></div></div>)}
         {d&&!loading&&<AnalysisDetail d={d} isDemo={isDemo&&!result} isHistoryView={false}/>}
       </div>
-      <BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setShowApiInput(true)}/>
+      <BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setTab("settings")}/>
     </div>
   );
 }
