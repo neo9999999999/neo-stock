@@ -718,7 +718,7 @@ function TradingGuide(){
 function App(){
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem(API_KEY_STORAGE)||"");
   const [showApiInput,setShowApiInput]=useState(false);
-  const [tab,setTab]=useState("analyze");
+  const [tab,setTab]=useState("guide");
   const [imgs,setImgs]=useState([]);
   const [selIdx,setSelIdx]=useState(0);
   const [loading,setLoading]=useState(false);
@@ -736,9 +736,10 @@ function App(){
 
   useEffect(()=>{loadHistoryList().then(l=>setHistoryCount(l.length));},[]);
 
-  if(!apiKey&&!showApiInput) return <ApiKeyScreen onSave={k=>{setApiKey(k);setShowApiInput(false);}}/>;
+  // API키 없어도 가이드 접근 가능
   if(showApiInput) return <ApiKeyScreen onSave={k=>{setApiKey(k);setShowApiInput(false);}}/>;
 
+  if(tab==="analyze"&&!apiKey&&!imgs.length){return(<div style={{fontFamily:"'Apple SD Gothic Neo',sans-serif",background:"#F0F2F5",minHeight:"100vh",paddingBottom:80}}><div style={{background:"#111",padding:"16px 18px 12px",position:"sticky",top:0,zIndex:100}}><b style={{fontSize:16,color:"#fff"}}>📊 실전 종목 분석</b></div><div style={{padding:"14px",maxWidth:720,margin:"0 auto"}}><div style={{background:"#1a1a2e",borderRadius:24,padding:28,textAlign:"center",marginTop:20}}><div style={{fontSize:48,marginBottom:12}}>🔑</div><div style={{fontSize:18,fontWeight:800,color:"#fff",marginBottom:8}}>API 키가 필요합니다</div><div style={{fontSize:13,color:"#555",marginBottom:16}}>차트 분석 기능을 사용하려면 Anthropic API 키를 등록하세요</div><button onClick={()=>setShowApiInput(true)} style={{background:"linear-gradient(135deg,#4CAF82,#5B8DEF)",border:"none",borderRadius:14,padding:"12px 24px",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer"}}>API 키 등록하기</button></div></div><BottomNav tab={tab} setTab={handleTabChange} historyCount={historyCount} onApiKey={()=>setShowApiInput(true)}/></div>);}
   const handleFiles=files=>{
     const arr=Array.from(files).filter(f=>f.type.startsWith("image/"));
     if(!arr.length)return;
