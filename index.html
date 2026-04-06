@@ -131,8 +131,16 @@ function resizeImage(dataUrl){
   });
 }
 function buildPrompt(today){
-  return "오늘 "+today+". HTS 차트 이미지 분석 후 JSON만 반환.\n수급: 우측 하단 일자별 투자자매매동향 맨 위 행(오늘) 숫자 사용.\n{ 로 시작 } 로 끝 JSON만. 백틱 금지.\n"
-    +JSON.stringify({name:"종목명",code:"코드",market:"KOSPI또는KOSDAQ",sector:"섹터",themes:["테마1","테마2"],cp:0,prev:0,cr:0,open:0,high:0,low:0,vol:0,tradeAmt:"거래대금",cap:"시가총액",per:"PER",pbr:"PBR",hi52:0,lo52:0,foreign:0,institution:0,individual:0,trend:"횡보",rsi:50,ma:"정배열",bp:50,vr:100,bbu:50,ru:50,iu:50,mu:50,ou:50,summary:"수급판독 3~4문장",planA:{prob:60,price:"목표가",desc:"설명"},planB:{prob:40,price:"지지가",desc:"설명"},ohlcHistory:[{date:"MM/DD",c:0,h:0,l:0,v:0,chg:0}],scan18:[{cat:"수급",item:"외국인",reason:"근거",pt:7},{cat:"수급",item:"기관",reason:"근거",pt:6},{cat:"수급",item:"거래량",reason:"근거",pt:7},{cat:"기술",item:"이평선",reason:"근거",pt:8},{cat:"기술",item:"RSI",reason:"근거",pt:6},{cat:"기술",item:"MACD",reason:"근거",pt:7},{cat:"기술",item:"볼린저",reason:"근거",pt:5},{cat:"기술",item:"일목균형",reason:"근거",pt:7},{cat:"차트",item:"추세",reason:"근거",pt:8},{cat:"차트",item:"저항선",reason:"근거",pt:6},{cat:"차트",item:"지지선",reason:"근거",pt:7},{cat:"차트",item:"패턴",reason:"근거",pt:6},{cat:"펀더",item:"PER",reason:"근거",pt:5},{cat:"펀더",item:"PBR",reason:"근거",pt:6},{cat:"펀더",item:"시총",reason:"근거",pt:7},{cat:"리스크",item:"변동성",reason:"근거",pt:5},{cat:"리스크",item:"유동성",reason:"근거",pt:7},{cat:"리스크",item:"모멘텀",reason:"근거",pt:6}],defense1:{level:"1차 지지",price:"가격",desc:"설명"},defense2:{level:"2차 지지",price:"가격",desc:"설명"},defense3:{level:"손절선",price:"가격",desc:"설명"},neoTip:"추천 플랜",stopLoss:"손절 조건",tip:"트레이딩 팁",news:["이슈1","이슈2","이슈3"],date:today});
+  const guide = "\n[매매가이드 기반 분석 필수]\n"
+    +"1.돌파봉분석: 전고점 종가기준 돌파여부, 돌파봉 시가/종가/중심선((시가+종가)/2) 계산, 위꼬리비율(몸통대비%), 거래대금 20일평균대비 배율\n"
+    +"2.매물대분석: 전고점과 현재가 이격률(%), 매물대소화 여부(같은가격대 반복횟수+거래량감소여부)\n"
+    +"3.눌림목시나리오: A(돌파봉종가 재돌파)-B(중심선지지)-C(20일선지지) 중 현재 어디에 해당하는지, 각 시나리오별 매수가/손절가 제시\n"
+    +"4.매도계획: 시가갭상승시(+5%/+9%/+10%), 전고점도달시, 추세이탈시 각각 매도전략\n"
+    +"5.종가베팅8조건체크: (a)주도테마일치 (b)대장주여부 (c)정배열/우상향 (d)신고가근접 (e)거래대금200억+ (f)위꼬리없는양봉 (g)당일저점미이탈+우상향 (h)기관외인순매수\n"
+    +"6.기간조정: 신고가후 조정일수, 저점상승여부, 거래량축소여부\n"
+    +"위 분석결과를 guideAnalysis 필드에 반드시 포함할것.\n";
+  return "오늘 "+today+". HTS 차트 이미지 분석 후 JSON만 반환.\n수급: 우측 하단 일자별 투자자매매동향 맨 위 행(오늘) 숫자 사용.\n{ 로 시작 } 로 끝 JSON만. 백틱 금지.\n"+guide
+    +JSON.stringify({name:"종목명",code:"코드",market:"KOSPI또는KOSDAQ",sector:"섹터",themes:["테마1","테마2"],cp:0,prev:0,cr:0,open:0,high:0,low:0,vol:0,tradeAmt:"거래대금",cap:"시가총액",per:"PER",pbr:"PBR",hi52:0,lo52:0,foreign:0,institution:0,individual:0,trend:"횡보",rsi:50,ma:"정배열",bp:50,vr:100,bbu:50,ru:50,iu:50,mu:50,ou:50,summary:"수급판독 3~4문장",planA:{prob:60,price:"목표가",desc:"설명"},planB:{prob:40,price:"지지가",desc:"설명"},ohlcHistory:[{date:"MM/DD",c:0,h:0,l:0,v:0,chg:0}],scan18:[{cat:"수급",item:"외국인",reason:"근거",pt:7},{cat:"수급",item:"기관",reason:"근거",pt:6},{cat:"수급",item:"거래량",reason:"근거",pt:7},{cat:"기술",item:"이평선",reason:"근거",pt:8},{cat:"기술",item:"RSI",reason:"근거",pt:6},{cat:"기술",item:"MACD",reason:"근거",pt:7},{cat:"기술",item:"볼린저",reason:"근거",pt:5},{cat:"기술",item:"일목균형",reason:"근거",pt:7},{cat:"차트",item:"추세",reason:"근거",pt:8},{cat:"차트",item:"저항선",reason:"근거",pt:6},{cat:"차트",item:"지지선",reason:"근거",pt:7},{cat:"차트",item:"패턴",reason:"근거",pt:6},{cat:"펀더",item:"PER",reason:"근거",pt:5},{cat:"펀더",item:"PBR",reason:"근거",pt:6},{cat:"펀더",item:"시총",reason:"근거",pt:7},{cat:"리스크",item:"변동성",reason:"근거",pt:5},{cat:"리스크",item:"유동성",reason:"근거",pt:7},{cat:"리스크",item:"모멘텀",reason:"근거",pt:6}],defense1:{level:"1차 지지",price:"가격",desc:"설명"},defense2:{level:"2차 지지",price:"가격",desc:"설명"},defense3:{level:"손절선",price:"가격",desc:"설명"},neoTip:"추천 플랜",stopLoss:"손절 조건",tip:"트레이딩 팁",news:["이슈1","이슈2","이슈3"],date:today,guideAnalysis:{breakout:{isBreakout:false,prevHigh:0,breakoutCandle:{open:0,close:0,center:0,upperWickPct:0},volumeRatio:"20일대비 배율",gapFromHigh:"전고점이격률%"},pullbackScenario:"A또는B또는C또는해당없음",pullbackDetail:"현재 눌림목 상태 설명",buyPoint:"구체적 매수가 제시",stopLoss:"구체적 손절가 제시",sellPlan:{gapUp5:"시가+5%시 행동",gapUp9:"시가+9%시 행동",gapUp10:"시가+10%시 행동",prevHighReach:"전고점도달시 행동",trendBreak:"추세이탈시 행동"},guide8Check:[{item:"주도테마일치",pass:false,detail:"판단근거"},{item:"대장주여부",pass:false,detail:"판단근거"},{item:"정배열우상향",pass:false,detail:"판단근거"},{item:"신고가근접",pass:false,detail:"판단근거"},{item:"거래대금200억+",pass:false,detail:"판단근거"},{item:"위꼬리없는양봉",pass:false,detail:"판단근거"},{item:"당일저점미이탈",pass:false,detail:"판단근거"},{item:"기관외인순매수",pass:false,detail:"판단근거"}],consolidation:{days:0,lowsRising:false,volumeShrinking:false,desc:"기간조정 상태"},verdict:"종가매수추천/분할매수/관망/매수금지 중택1",verdictReason:"판정 근거 2~3문장"}});
 }
 
 // ─── 공통 컴포넌트 ───
@@ -337,6 +345,62 @@ function AnalysisDetail({d,isDemo,isHistoryView}){
         </div>
       </div>
 
+      
+      {d.guideAnalysis&&<div style={{borderRadius:24,overflow:"hidden",marginBottom:12,boxShadow:"0 4px 24px rgba(0,0,0,0.08)"}}>
+        <div style={{background:"linear-gradient(135deg,#1a1a2e,#16213e)",padding:"22px 20px"}}>
+          <div style={{fontSize:13,color:"#F5A623",fontWeight:700,marginBottom:4}}>📖 매매가이드 기반 실전 분석</div>
+          <div style={{fontSize:11,color:"#555"}}>신정재 특강 전략 자동 적용</div>
+        </div>
+        <div style={{background:"#fff",padding:"16px 18px"}}>
+          {d.guideAnalysis.breakout&&<div style={{marginBottom:16}}>
+            <div style={{fontSize:14,fontWeight:800,color:"#5B8DEF",marginBottom:10}}>🎯 돌파봉 분석</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+              {[["전고점",(d.guideAnalysis.breakout.prevHigh||0).toLocaleString()+"원"],["이격률",d.guideAnalysis.breakout.gapFromHigh||"-"],["돌파여부",d.guideAnalysis.breakout.isBreakout?"✅ 돌파":"❌ 미돌파"],["거래량배율",d.guideAnalysis.breakout.volumeRatio||"-"]].map(([l,v],i)=><div key={i} style={{background:"#F8F9FB",borderRadius:12,padding:"10px 12px"}}><div style={{fontSize:10,color:"#bbb",marginBottom:2}}>{l}</div><div style={{fontSize:13,fontWeight:700,color:i===2?(d.guideAnalysis.breakout.isBreakout?"#4CAF82":"#D43030"):"#111"}}>{v}</div></div>)}
+            </div>
+            {d.guideAnalysis.breakout.breakoutCandle&&d.guideAnalysis.breakout.breakoutCandle.center>0&&<div style={{background:"#EEF4FF",borderRadius:12,padding:12,fontSize:12,lineHeight:1.8}}>
+              <b style={{color:"#5B8DEF"}}>돌파봉 기준가</b><br/>
+              종가 {(d.guideAnalysis.breakout.breakoutCandle.close||0).toLocaleString()}원 · 중심선 {(d.guideAnalysis.breakout.breakoutCandle.center||0).toLocaleString()}원 · 시가 {(d.guideAnalysis.breakout.breakoutCandle.open||0).toLocaleString()}원<br/>
+              위꼬리 {d.guideAnalysis.breakout.breakoutCandle.upperWickPct||0}%
+            </div>}
+          </div>}
+          {d.guideAnalysis.pullbackScenario&&<div style={{marginBottom:16}}>
+            <div style={{fontSize:14,fontWeight:800,color:"#8B6FE8",marginBottom:10}}>📉 눌림목 시나리오</div>
+            <div style={{background:d.guideAnalysis.pullbackScenario==="A"?"#E8F8F0":d.guideAnalysis.pullbackScenario==="B"?"#EEF4FF":d.guideAnalysis.pullbackScenario==="C"?"#FFF8EE":"#F8F9FB",borderRadius:16,padding:14}}>
+              <div style={{fontSize:18,fontWeight:900,color:d.guideAnalysis.pullbackScenario==="A"?"#4CAF82":d.guideAnalysis.pullbackScenario==="B"?"#5B8DEF":"#F5A623",marginBottom:6}}>시나리오 {d.guideAnalysis.pullbackScenario}</div>
+              <div style={{fontSize:13,color:"#444",lineHeight:1.8,marginBottom:8}}>{d.guideAnalysis.pullbackDetail||"-"}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div style={{background:"rgba(76,175,130,0.1)",borderRadius:10,padding:"8px 10px"}}><div style={{fontSize:10,color:"#1E9E5E",fontWeight:700}}>매수 타점</div><div style={{fontSize:14,fontWeight:800,color:"#1E9E5E"}}>{d.guideAnalysis.buyPoint||"-"}</div></div>
+                <div style={{background:"rgba(212,48,48,0.1)",borderRadius:10,padding:"8px 10px"}}><div style={{fontSize:10,color:"#D43030",fontWeight:700}}>손절 라인</div><div style={{fontSize:14,fontWeight:800,color:"#D43030"}}>{d.guideAnalysis.stopLoss||"-"}</div></div>
+              </div>
+            </div>
+          </div>}
+          {d.guideAnalysis.sellPlan&&<div style={{marginBottom:16}}>
+            <div style={{fontSize:14,fontWeight:800,color:"#D4820E",marginBottom:10}}>📈 시나리오별 매도 계획</div>
+            {[["시가 +5% 갭상승",d.guideAnalysis.sellPlan.gapUp5,"#4CAF82"],["시가 +9% 갭상승",d.guideAnalysis.sellPlan.gapUp9,"#4CAF82"],["시가 +10% 갭상승",d.guideAnalysis.sellPlan.gapUp10,"#F5A623"],["전고점 도달",d.guideAnalysis.sellPlan.prevHighReach,"#5B8DEF"],["추세 이탈",d.guideAnalysis.sellPlan.trendBreak,"#D43030"]].map(([label,action,c],i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<4?"1px solid #F5F5F5":"none"}}><span style={{fontSize:13,color:"#888"}}>{label}</span><span style={{fontSize:13,fontWeight:700,color:c}}>{action||"-"}</span></div>)}
+          </div>}
+          {d.guideAnalysis.guide8Check&&<div style={{marginBottom:16}}>
+            <div style={{fontSize:14,fontWeight:800,color:"#4CAF82",marginBottom:10}}>✅ 종가베팅 8조건 체크</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+              {(d.guideAnalysis.guide8Check||[]).map((c,i)=><div key={i} style={{background:c.pass?"#E8F8F0":"#FFF0F0",borderRadius:10,padding:"8px 10px"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,fontWeight:700,color:c.pass?"#1E9E5E":"#D43030"}}>{c.item}</span><span style={{fontSize:11,fontWeight:800,color:c.pass?"#1E9E5E":"#D43030"}}>{c.pass?"✓":"✗"}</span></div><div style={{fontSize:10,color:"#888"}}>{c.detail||""}</div></div>)}
+            </div>
+          </div>}
+          {d.guideAnalysis.consolidation&&<div style={{marginBottom:16}}>
+            <div style={{fontSize:14,fontWeight:800,color:"#8B6FE8",marginBottom:8}}>📅 기간조정 분석</div>
+            <div style={{display:"flex",gap:8,marginBottom:6}}>
+              <span style={{fontSize:12,background:"#F0F5FF",color:"#5B8DEF",borderRadius:20,padding:"3px 10px",fontWeight:700}}>조정 {d.guideAnalysis.consolidation.days||0}일</span>
+              <span style={{fontSize:12,background:d.guideAnalysis.consolidation.lowsRising?"#E8F8F0":"#FFF0F0",color:d.guideAnalysis.consolidation.lowsRising?"#1E9E5E":"#D43030",borderRadius:20,padding:"3px 10px",fontWeight:700}}>{d.guideAnalysis.consolidation.lowsRising?"저점상승":"저점하락"}</span>
+              <span style={{fontSize:12,background:d.guideAnalysis.consolidation.volumeShrinking?"#E8F8F0":"#FFF8EE",color:d.guideAnalysis.consolidation.volumeShrinking?"#1E9E5E":"#D4820E",borderRadius:20,padding:"3px 10px",fontWeight:700}}>{d.guideAnalysis.consolidation.volumeShrinking?"거래량축소":"거래량유지"}</span>
+            </div>
+            <div style={{fontSize:12,color:"#555",lineHeight:1.7}}>{d.guideAnalysis.consolidation.desc||""}</div>
+          </div>}
+          {d.guideAnalysis.verdict&&<div style={{background:"linear-gradient(135deg,#1a1a2e,#16213e)",borderRadius:16,padding:16,textAlign:"center"}}>
+            <div style={{fontSize:11,color:"#F5A623",fontWeight:700,marginBottom:6}}>📖 매매가이드 최종 판정</div>
+            <div style={{fontSize:24,fontWeight:900,color:d.guideAnalysis.verdict.includes("추천")?"#4CAF82":d.guideAnalysis.verdict.includes("금지")?"#D43030":"#F5A623",marginBottom:8}}>{d.guideAnalysis.verdict}</div>
+            <div style={{fontSize:13,color:"#aaa",lineHeight:1.8}}>{d.guideAnalysis.verdictReason||""}</div>
+          </div>}
+        </div>
+      </div>}
+      
       {/* ── 최종 종합 판정 ── */}
       <div style={{borderRadius:24,overflow:"hidden",marginBottom:12,boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
         <div style={{background:vBg,padding:"32px 20px 24px",textAlign:"center"}}>
