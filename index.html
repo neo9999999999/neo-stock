@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>📊 NEO 종가분석</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a12;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
+input,textarea,button{font-family:inherit}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade-in{animation:fadeIn .4s ease}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useEffect,useCallback}=React;
+
+// ─── 색상/유틸 ───
+const C={
+  bg:"#0a0a12",card:"#12121e",card2:"#1a1a2e",
+  accent:"#5B8DEF",green:"#4CAF82",red:"#FF5C5C",orange:"#F5A623",purple:"#8B6FE8",pink:"#E05C8A",cyan:"#26C6DA",
+  text:"#E8E8F0",sub:"#888",border:"#222"
+};
+const TC=[C.green,C.accent,C.orange,C.pink,C.purple,C.cyan];
+const gc=pt=>pt>=8?C.green:pt>=5?C.orange:C.red;
+const ngr=t=>t>=90?"S급":t>=80?"A급":t>=70?"B급":t>=60?"C급":"D급";
+const ngc=t=>t>=90?"#1E9E5E":t>=80?C.green:t>=70?C.orange:t>=60?"#E88D30":C.red;
+
+// ─── localStorage 래퍼 ───
+const LS={
+  get:(k)=>{try{return localStorage.getItem(k)}catch{return null}},
+  set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}},
+  del:(k)=>{try{localStorage.removeItem(k)}catch{}},
+  json:(k)=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},
+};
+
+// ─── 공통 UI ───
+const Card=({children,style})=><div style={{background:C.card,borderRadius:16,padding:16,marginBottom:12,border:`1px solid ${C.border}`,...style}}>{children}</div>;
+const Badge=({children,color=C.accent,bg})=><span style={{display:"inline-block",fontSize:11,fontWeight:700,color,background:bg||color+"22",padding:"3px 10px",borderRadius:20}}>{children}</span>;
+
+
+// ─── 분석 결과 상세 ───
+function AnalysisDetail({d,isHistoryView}){
+  if(!d)return null;
+  const items=d.checklist||[];
+  const score=items.filter(x=>x.pass).length;
+  const total=items.length||6;
+  const pct=Math.round((score/total)*100);
+  const guideData=d.tradingGuide||null;
+  return(
+    <div className="fade-in">
+      <Card style={{background:"linear-gradient(135deg,#0d1b2a,#1b2838)",border:"1px solid #1a3a5c"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <div><div style={{fontSize:18,fontWeight:800,color:C.text}}>{d.stockName||"종목 분석"}</div>
+          <div style={{fontSize:12,color:C.sub,marginTop:2}}>{d.date||new Date().toLocaleDateString("ko")}</div></div>
+          <div style={{textAlign:"center"}}><div style={{fontSize:32,fontWeight:900,color:ngc(pct)}}>{pct}</div>
+          <Badge color={ngc(pct)}>{ngr(pct)}</Badge></div>
+        </div>
+        <div style={{background:"#0002",borderRadius:10,height:8,overflow:"hidden",marginBottom:16}}>
+          <div style={{height:"100%",width:pct+"%",background:`linear-gradient(90deg,${ngc(pct)},${ngc(pct)}88)`,borderRadius:10,transition:"width .5s"}}/>
+        </div>
+        {items.map((item,i)=>(
+          <div key={i} style={{display:"flex",gap:10,padding:"10px 0",borderBottom:i<items.length-1?`1px solid ${C.border}`:"none"}}>
+            <div style={{width:28,height:28,borderRadius:14,background:item.pass?C.green+"22":C.red+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>{item.pass?"✅":"❌"}</div>
+            <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:C.text}}>{item.label}</div>
+            <div style={{fontSize:12,color:C.sub,marginTop:2}}>{item.detail}</div></div>
+          </div>
+        ))}
+      </Card>
+      {d.analysis&&<Card><div style={{fontSize:13,fontWeight:700,color:C.accent,marginBottom:8}}>📝 AI 종합 분석</div>
+        <div style={{fontSize:13,color:C.text,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{d.analysis}</div></Card>}
+      {d.verdict&&<Card style={{background:d.verdict.includes("매수")||d.verdict.includes("긍정")?"#0a2a1a":"#2a0a0a",border:`1px solid ${d.verdict.includes("매수")||d.verdict.includes("긍정")?C.green:C.red}44`}}>
+        <div style={{fontSize:14,fontWeight:800,color:d.verdict.includes("매수")||d.verdict.includes("긍정")?C.green:C.red,textAlign:"center"}}>{d.verdict}</div></Card>}
+      {guideData&&<Card style={{border:`1px solid ${C.purple}44`}}>
+        <div style={{fontSize:13,fontWeight:700,color:C.purple,marginBottom:10}}>📖 매매가이드 기반 실전 분석</div>
+        {guideData.breakout&&<div style={{marginBottom:10}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.orange,marginBottom:4}}>돌파봉 기준</div>
+          <div style={{fontSize:12,color:C.text,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{guideData.breakout}</div></div>}
+        {guideData.pullback&&<div style={{marginBottom:10}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.cyan,marginBottom:4}}>눌림목 시나리오</div>
+          <div style={{fontSize:12,color:C.text,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{guideData.pullback}</div></div>}
+        {guideData.sellPlan&&<div style={{marginBottom:10}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.pink,marginBottom:4}}>매도 계획</div>
+          <div style={{fontSize:12,color:C.text,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{guideData.sellPlan}</div></div>}
+        {guideData.conditions&&<div style={{marginBottom:10}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.green,marginBottom:4}}>8조건 체크</div>
+          <div style={{fontSize:12,color:C.text,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{guideData.conditions}</div></div>}
+        {guideData.finalVerdict&&<div style={{padding:"10px 14px",background:C.purple+"15",borderRadius:12,textAlign:"center"}}>
+          <div style={{fontSize:13,fontWeight:800,color:C.purple}}>{guideData.finalVerdict}</div></div>}
+      </Card>}
+    </div>
+  );
+}
+
+
+// ─── 매매가이드 컴포넌트 ───
+function TradingGuide(){
+  const[tab,setTab]=useState(0);
+  const tabs=["종목선정5","체크6","돌파차트","성공조건","눌림목","매도기준","스킬","HTS"];
+  const H=({c=C.accent,children})=><div style={{fontSize:14,fontWeight:800,color:c,marginBottom:8}}>{children}</div>;
+  const D=({children})=><div style={{fontSize:13,color:C.text,lineHeight:1.7,marginBottom:6}}>{children}</div>;
+  const S=({children,bg=C.card2})=><div style={{background:bg,borderRadius:12,padding:"12px 14px",marginBottom:10}}>{children}</div>;
+  const Tip=({children})=><div style={{background:C.orange+"15",borderLeft:`3px solid ${C.orange}`,padding:"8px 12px",borderRadius:"0 10px 10px 0",marginBottom:10}}><div style={{fontSize:12,color:C.orange,lineHeight:1.6}}>{children}</div></div>;
+
+  const content=[
+    // 0: 종목선정 5단계
+    ()=><div className="fade-in">
+      <Card><H c={C.green}>종목선정 5단계 프로세스</H>
+        {["① 재료(테마) 확인 — 시장 주도 테마, 정책/실적/이슈 기반","② 거래량·거래대금 — 일 200억+, 20일 평균 대비 3배↑ 폭증","③ 차트 패턴 — 정배열(5>20>60>120MA), 우상향 추세","④ 캔들 분석 — 양봉 실체 크고 위꼬리 10% 이내, 하꼬리 지지","⑤ 기간조정 — 20일선 눌림 7~15일, 저점 상승+거래량 감소"].map((t,i)=>
+          <S key={i}><D>{t}</D></S>
+        )}
+      </Card>
+      <Tip>💡 5단계 모두 통과해야 종가베팅 대상. 하나라도 불충분하면 PASS!</Tip>
+    </div>,
+
+    // 1: 체크포인트 6
+    ()=><div className="fade-in">
+      <Card><H c={C.accent}>종가베팅 체크포인트 6가지</H>
+        {[
+          {n:"재료 강도",d:"시장 주도 테마 / 정책 수혜 / 실적 서프라이즈 / 수급 특이점"},
+          {n:"거래대금",d:"일 거래대금 200억↑ / 20일 평균 대비 3배 이상 폭증 / 1000억 이상이면 대장주 후보"},
+          {n:"매물대 이격",d:"전고점 대비 현재가 95~100% (이격 5~15% 이내) / 같은 가격대 반복 테스트하며 거래량 감소 = 매물대 소화 완료"},
+          {n:"차트 건강도",d:"이동평균선 정배열 / 60일선 위에서 눌림 / 거래량 동반 양봉 출현"},
+          {n:"수급 동향",d:"외인·기관 순매수 전환 or 지속 / 공매도 감소 추세"},
+          {n:"기간조정 충분성",d:"고점 후 7~15거래일 조정 / 조정 중 저점 상승 + 거래량 감소 → 재상승 시그널"}
+        ].map((item,i)=><S key={i}><div style={{fontSize:13,fontWeight:700,color:TC[i%6],marginBottom:4}}>✓ {item.n}</div><D>{item.d}</D></S>)}
+      </Card>
+    </div>,
+
+    // 2: 돌파 차트
+    ()=><div className="fade-in">
+      <Card><H c={C.orange}>돌파봉 판별 기준</H>
+        <S><D>✅ 거래대금: 20일 평균 대비 3배 이상 폭증</D></S>
+        <S><D>✅ 등락률: 전일 대비 +5% 이상 양봉</D></S>
+        <S><D>✅ 위꼬리: 전체 봉 길이의 10% 이내 (매도 압력 약함)</D></S>
+        <S><D>✅ 종가 위치: 전고점(매물대) 위에서 마감</D></S>
+        <S><D>✅ 돌파봉 중심선 = (시가 + 종가) ÷ 2 → 이후 핵심 지지선</D></S>
+      </Card>
+      <Card><H c={C.pink}>돌파 후 매수 타이밍</H>
+        <S bg={C.green+"15"}><D>🟢 종가베팅(15:18~20): 돌파봉 당일 종가 부근 매수. 다음날 갭상승 노림</D></S>
+        <S bg={C.accent+"15"}><D>🔵 눌림 후 재돌파: 돌파봉 종가 부근까지 눌렸다가 다시 돌파 시 매수</D></S>
+        <Tip>⚠️ 돌파봉 위꼬리가 20% 이상이면 "가짜 돌파" 가능성. 다음날 확인 필수!</Tip>
+      </Card>
+    </div>,
+
+    // 3: 성공 조건
+    ()=><div className="fade-in">
+      <Card><H c={C.purple}>종가베팅 성공 종목 8조건</H>
+        <D>6개 이상 충족 = 매수 대상 / 7~8개 = 과감 베팅</D>
+        {[
+          "① 현재 시장 주도 테마의 대장주 (가장 중요!)",
+          "② 이동평균선 정배열 (5 > 20 > 60 > 120일선)",
+          "③ 신고가 경신 or 전고점 돌파 근접",
+          "④ 거래대금 1000억+ 또는 20일 평균 3배↑",
+          "⑤ 돌파봉 위꼬리 10% 이내",
+          "⑥ 조정 중 직전 저점 미이탈 (저점 상승)",
+          "⑦ 외인 or 기관 순매수 동반",
+          "⑧ 섹터 내 상대강도 1위~3위"
+        ].map((t,i)=><S key={i}><D>{t}</D></S>)}
+      </Card>
+      <Tip>💡 대장주 판별법: 테마 상승일에 가장 먼저 상한가 or 가장 높은 등락률 기록하는 종목</Tip>
+    </div>,
+
+    // 4: 눌림목
+    ()=><div className="fade-in">
+      <Card><H c={C.cyan}>눌림목 반등 매수 3시나리오</H>
+        <S bg="#0a2a1a"><div style={{fontSize:13,fontWeight:700,color:C.green,marginBottom:6}}>A. 재돌파 매수 (승률 높음)</div>
+          <D>조건: 돌파봉 종가 부근까지 눌린 후, 거래량 증가하며 다시 돌파봉 종가를 넘을 때</D>
+          <D>진입가: 돌파봉 종가 +0.5%</D>
+          <D>손절: 돌파봉 중심선 -2%</D></S>
+        <S bg="#0a1a2e"><div style={{fontSize:13,fontWeight:700,color:C.accent,marginBottom:6}}>B. 중심선 지지 매수 (표준)</div>
+          <D>조건: 돌파봉 중심선(시가+종가÷2) 부근에서 거래량 감소 + 양봉 출현</D>
+          <D>진입가: 중심선 ±1%</D>
+          <D>손절: 돌파봉 시가 -2%</D></S>
+        <S bg="#1a0a2e"><div style={{fontSize:13,fontWeight:700,color:C.purple,marginBottom:6}}>C. 20일선 지지 매수 (보수적)</div>
+          <D>조건: 20일 이동평균선에서 지지 확인 + 거래량 바닥 후 반등</D>
+          <D>진입가: 20MA +1%</D>
+          <D>손절: 20MA -3%</D></S>
+      </Card>
+      <Card style={{border:`1px solid ${C.red}44`}}><H c={C.red}>⛔ 눌림목 매수 금지 조건</H>
+        <D>• 눌림 중 거래량 증가 + 음봉 연속 = 매도세 강화 → 매수 금지</D>
+        <D>• 돌파봉 시가를 종가 기준 하회 = 돌파 실패 → 손절</D>
+        <D>• 20일선 아래로 종가 이탈 = 추세 전환 위험 → 관망</D>
+      </Card>
+    </div>,
+
+    // 5: 매도 기준
+    ()=><div className="fade-in">
+      <Card><H c={C.pink}>시나리오별 매도 기준</H>
+        <S><div style={{fontSize:13,fontWeight:700,color:C.green,marginBottom:6}}>돌파봉 종가매수 시</div>
+          <D>• +5%: 1/3 분할 매도</D>
+          <D>• +9% 이상 갭상승: 시가 전량 매도 (원칙!)</D>
+          <D>• +10~15%: 추가 1/3 매도</D>
+          <D>• 전고점 도달: 잔량 전량 매도</D>
+          <D>• 손절: 돌파봉 중심선 -2% 이탈 시</D></S>
+        <S><div style={{fontSize:13,fontWeight:700,color:C.accent,marginBottom:6}}>눌림목 반등 매수 시</div>
+          <D>• 돌파봉 종가 회복: 1/3 매도</D>
+          <D>• 전고점 도달: 1/3 추가 매도</D>
+          <D>• 신고가 +3%: 잔량 매도</D>
+          <D>• 손절: 진입가 대비 -3~5%</D></S>
+      </Card>
+      <Tip>💡 시가 9% 갭상승 = 무조건 전량 매도! 욕심 부리면 고점 물림</Tip>
+      <Card style={{border:`1px solid ${C.red}44`}}><H c={C.red}>절대 원칙</H>
+        <D>• 빚투(신용/미수) 절대 금지</D>
+        <D>• 장중 매수 절대 금지 → 종가베팅만 (15:18~20)</D>
+        <D>• 수익 나올 때 반드시 일부 확보</D>
+        <D>• 1종목 투자비중 30% 이내</D>
+      </Card>
+    </div>,
+
+    // 6: 스킬
+    ()=><div className="fade-in">
+      <Card><H c={C.purple}>트레이딩 핵심 스킬</H>
+        <S><div style={{fontSize:13,fontWeight:700,color:C.orange,marginBottom:4}}>종가베팅 매수 타이밍</div>
+          <D>15:18~15:20 사이 매수. 15:20 이후 동시호가에서는 취소 불가.</D>
+          <D>장중 급등 종목 추격매수 ❌ → 반드시 종가 확인 후 진입</D></S>
+        <S><div style={{fontSize:13,fontWeight:700,color:C.cyan,marginBottom:4}}>분할매수 전략</div>
+          <D>1차 종가매수 50% → 2차 눌림 시 30% → 3차 재돌파 시 20%</D></S>
+        <S><div style={{fontSize:13,fontWeight:700,color:C.pink,marginBottom:4}}>멘탈 관리</div>
+          <D>연속 2회 손절 → 하루 쉬기. 수익 난 날 추가매수 자제.</D>
+          <D>"수익은 실현해야 내 돈" — 미실현 수익에 집착하지 말 것</D></S>
+      </Card>
+    </div>,
+
+    // 7: HTS
+    ()=><div className="fade-in">
+      <Card><H c={C.accent}>HTS/MTS 세팅 가이드</H>
+        <S><div style={{fontSize:13,fontWeight:700,color:C.orange,marginBottom:4}}>차트 세팅</div>
+          <D>Envelope 중심선 20, 40 + 저항선 + 거래대금 확인 + 강세/약세패턴 표시</D></S>
+        <S><div style={{fontSize:13,fontWeight:700,color:C.green,marginBottom:4}}>관심종목 정리</div>
+          <D>테마별 그룹 분류 → 거래대금 상위 5종목만 추적 → 매일 장 마감 후 정리</D></S>
+        <S><div style={{fontSize:13,fontWeight:700,color:C.purple,marginBottom:4}}>끼 있는 종목 판별법</div>
+          <D>대량 거래 음봉 후 → 저점을 깨지 않는다? → 봐야 한다!</D>
+          <D>매물대 소화 후 깨끗한 양봉 출현 = 재매수 타점</D></S>
+      </Card>
+    </div>
+  ];
+
+  return(
+    <div>
+      <div style={{background:"linear-gradient(135deg,#111,#1a1a2e)",padding:"16px 18px 12px",position:"sticky",top:0,zIndex:100}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <b style={{fontSize:16,color:"#fff"}}>📖 종가베팅 매매 가이드</b>
+          <Badge color={C.orange}>신정재 특강 기반</Badge>
+        </div>
+        <div style={{fontSize:11,color:C.sub,marginTop:3}}>종목선정 · 매수/매도 타이밍 · 실전 트레이딩 전략</div>
+      </div>
+      <div style={{padding:"10px 14px",overflowX:"auto",display:"flex",gap:6,background:C.bg,position:"sticky",top:52,zIndex:99}}>
+        {tabs.map((t,i)=><button key={i} onClick={()=>setTab(i)} style={{flexShrink:0,padding:"7px 14px",borderRadius:20,fontSize:12,fontWeight:700,border:`1.5px solid ${tab===i?C.accent:C.border}`,background:tab===i?C.accent:C.card,color:tab===i?"#fff":C.sub,cursor:"pointer"}}>{t}</button>)}
+      </div>
+      <div style={{padding:14,maxWidth:720,margin:"0 auto"}}>{content[tab]()}</div>
+      <div style={{textAlign:"center",fontSize:12,color:"#555",lineHeight:2,padding:"4px 0 20px"}}>📖 투자 권유 아님 · 개인 학습 참고용</div>
+    </div>
+  );
+}
+
+
+// ─── 프롬프트는 서버에서 처리 ───
+
+// ─── 하단 내비게이션 ───
+function BottomNav({tab,setTab,historyCount}){
+  const items=[
+    {id:"guide",icon:"📖",label:"매매가이드"},
+    {id:"analyze",icon:"📊",label:"분석"},
+    {id:"history",icon:"📁",label:"히스토리",badge:historyCount},
+
+  ];
+  return(
+    <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d0d18",borderTop:`1px solid ${C.border}`,display:"flex",zIndex:200,paddingBottom:"env(safe-area-inset-bottom)"}}>
+      {items.map(item=>(
+        <button key={item.id} onClick={()=>setTab(item.id)} style={{flex:1,padding:"10px 0 8px",background:"none",border:"none",cursor:"pointer",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+          <span style={{fontSize:20}}>{item.icon}</span>
+          <span style={{fontSize:10,fontWeight:700,color:tab===item.id?C.accent:C.sub}}>{item.label}</span>
+          {item.badge>0&&<span style={{position:"absolute",top:6,right:"calc(50% - 18px)",background:C.red,color:"#fff",fontSize:9,fontWeight:800,borderRadius:10,padding:"1px 5px",minWidth:16,textAlign:"center"}}>{item.badge}</span>}
+          {tab===item.id&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,background:C.accent,borderRadius:2}}/>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── 메인 앱 ───
+function App(){
+  const[tab,setTab]=useState("guide");
+  const[imgs,setImgs]=useState([]);
+  const[loading,setLoading]=useState(false);
+  const[result,setResult]=useState(null);
+  const[error,setError]=useState(null);
+  const[history,setHistory]=useState(()=>LS.json("neo-history")||[]);
+  const[stepIdx,setStepIdx]=useState(0);
+  const[viewItem,setViewItem]=useState(null);
+  const fileRef=useRef(null);
+
+  const historyCount=history.length;
+
+
+
+  const addImg=(file)=>{
+    const reader=new FileReader();
+    reader.onload=(e)=>{setImgs(prev=>[...prev,{name:file.name,data:e.target.result,date:new Date().toLocaleDateString("ko")}]);};
+    reader.readAsDataURL(file);
+  };
+
+  const removeImg=(idx)=>setImgs(prev=>prev.filter((_,i)=>i!==idx));
+
+  const analyze=async()=>{
+    if(imgs.length===0){setError("차트 이미지를 먼저 업로드해주세요.");return;}
+    setLoading(true);setError(null);setResult(null);setStepIdx(0);
+    const steps=["이미지 전송중","차트 분석중","매매가이드 적용중","결과 생성중"];
+    const timer=setInterval(()=>setStepIdx(p=>Math.min(p+1,steps.length-1)),2500);
+    try{
+      const images=imgs.map(img=>({mediaType:img.data.startsWith("data:image/png")?"image/png":"image/jpeg",data:img.data.split(",")[1]}));
+      const resp=await fetch("/api/analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({images})
+      });
+      if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error||`서버 오류 (${resp.status})`);}
+      const parsed=await resp.json();
+      setResult(parsed);
+      const entry={id:Date.now(),date:new Date().toLocaleDateString("ko"),time:new Date().toLocaleTimeString("ko"),stockName:parsed.stockName||"분석",score:Math.round((parsed.checklist?.filter(x=>x.pass).length/(parsed.checklist?.length||6))*100),verdict:parsed.verdict||"",data:parsed,thumbnail:imgs[0]?.data?.substring(0,200)};
+      const newHist=[entry,...history].slice(0,50);
+      setHistory(newHist);
+      LS.set("neo-history",JSON.stringify(newHist));
+    }catch(err){setError(err.message);}
+    finally{clearInterval(timer);setStepIdx(4);setLoading(false);}
+  };
+
+  const deleteHistory=(id)=>{const h=history.filter(x=>x.id!==id);setHistory(h);LS.set("neo-history",JSON.stringify(h));};
+
+  const steps=["이미지 전송","차트 분석","가이드 적용","결과 생성"];
+
+  // ─── 매매가이드 탭 ───
+  if(tab==="guide") return(
+    <div style={{background:C.bg,minHeight:"100vh",paddingBottom:80}}>
+      <TradingGuide/>
+      <BottomNav tab={tab} setTab={setTab} historyCount={historyCount}/>
+    </div>
+  );
+
+  // ─── 분석 탭 ───
+  if(tab==="analyze"){
+    const d=result;
+    return(
+      <div style={{background:C.bg,minHeight:"100vh",paddingBottom:80}}>
+        <div style={{background:"linear-gradient(135deg,#0d1b2a,#1a1a2e)",padding:"16px 18px 12px",position:"sticky",top:0,zIndex:100}}>
+          <b style={{fontSize:16,color:"#fff"}}>📊 AI 차트 분석</b>
+          <div style={{fontSize:11,color:C.sub,marginTop:3}}>매매가이드 전략 기반 종합 분석</div>
+        </div>
+        <div style={{padding:14,maxWidth:720,margin:"0 auto"}}>
+          {/* 이미지 업로드 영역 */}
+          <Card style={{border:`2px dashed ${C.border}`,textAlign:"center",cursor:"pointer"}} onClick={()=>fileRef.current?.click()}>
+            <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e)=>{Array.from(e.target.files).forEach(addImg);e.target.value="";}}/>
+            <div style={{fontSize:36,marginBottom:8}}>📷</div>
+            <div style={{fontSize:14,fontWeight:700,color:C.text}}>차트 이미지 업로드</div>
+            <div style={{fontSize:12,color:C.sub,marginTop:4}}>HTS/MTS 캡처 이미지를 여기에 드롭하거나 클릭</div>
+          </Card>
+          {imgs.length>0&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+            {imgs.map((img,i)=><div key={i} style={{position:"relative",width:80,height:80,borderRadius:12,overflow:"hidden",border:`1px solid ${C.border}`}}>
+              <img src={img.data} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+              <button onClick={()=>removeImg(i)} style={{position:"absolute",top:2,right:2,width:20,height:20,borderRadius:10,background:C.red,color:"#fff",border:"none",fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            </div>)}
+          </div>}
+
+          {/* API키 제거됨 — 분석 시 자동 prompt */}
+
+          {/* 분석 버튼 */}
+          {imgs.length>0&&!loading&&<button onClick={analyze} style={{width:"100%",padding:"14px",borderRadius:14,background:`linear-gradient(135deg,${C.accent},${C.purple})`,color:"#fff",fontSize:15,fontWeight:800,border:"none",cursor:"pointer",marginBottom:16}}>🚀 매매가이드 기반 AI 분석 시작</button>}
+
+          {/* 로딩 */}
+          {loading&&<Card style={{textAlign:"center"}}>
+            <div style={{width:40,height:40,border:`3px solid ${C.border}`,borderTopColor:C.accent,borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 12px"}}/>
+            <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:8}}>분석 중...</div>
+            <div style={{display:"flex",justifyContent:"center",gap:8}}>{steps.map((s,i)=><div key={i} style={{textAlign:"center"}}><div style={{width:24,height:24,borderRadius:12,background:i<=stepIdx?C.accent:C.card2,color:i<=stepIdx?"#fff":C.sub,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{i<stepIdx?"✓":i+1}</div><div style={{fontSize:9,color:i<=stepIdx?C.accent:C.sub,marginTop:2}}>{s}</div></div>)}</div>
+          </Card>}
+
+          {/* 에러 */}
+          {error&&!loading&&<Card style={{border:`1px solid ${C.red}44`}}>
+            <div style={{display:"flex",gap:10}}>
+              <span style={{fontSize:22}}>⚠️</span>
+              <div><div style={{fontSize:13,fontWeight:700,color:C.red,marginBottom:4}}>분석 실패</div>
+              <div style={{fontSize:12,color:C.red}}>{error}</div>
+              <button onClick={analyze} style={{marginTop:8,background:C.red,color:"#fff",border:"none",borderRadius:10,padding:"8px 16px",fontSize:12,fontWeight:700,cursor:"pointer"}}>🔄 다시 시도</button></div>
+            </div>
+          </Card>}
+
+          {/* 결과 */}
+          {d&&!loading&&<AnalysisDetail d={d}/>}
+        </div>
+        <BottomNav tab={tab} setTab={setTab} historyCount={historyCount}/>
+      </div>
+    );
+  }
+
+  // ─── 히스토리 탭 ───
+  if(tab==="history"){
+    if(viewItem) return(
+      <div style={{background:C.bg,minHeight:"100vh",paddingBottom:80}}>
+        <div style={{background:"linear-gradient(135deg,#0d1b2a,#1a1a2e)",padding:"16px 18px 12px",display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>setViewItem(null)} style={{background:"none",border:"none",color:C.accent,fontSize:20,cursor:"pointer"}}>←</button>
+          <div><b style={{fontSize:16,color:"#fff"}}>{viewItem.stockName}</b><div style={{fontSize:11,color:C.sub}}>{viewItem.date} {viewItem.time}</div></div>
+        </div>
+        <div style={{padding:14,maxWidth:720,margin:"0 auto"}}><AnalysisDetail d={viewItem.data} isHistoryView/></div>
+        <BottomNav tab={tab} setTab={setTab} historyCount={historyCount}/>
+      </div>
+    );
+    return(
+      <div style={{background:C.bg,minHeight:"100vh",paddingBottom:80}}>
+        <div style={{background:"linear-gradient(135deg,#0d1b2a,#1a1a2e)",padding:"16px 18px 12px"}}>
+          <b style={{fontSize:16,color:"#fff"}}>📁 분석 히스토리</b>
+          <div style={{fontSize:11,color:C.sub,marginTop:3}}>{history.length}건의 분석 기록</div>
+        </div>
+        <div style={{padding:14,maxWidth:720,margin:"0 auto"}}>
+          {history.length===0&&<Card style={{textAlign:"center"}}><div style={{fontSize:36,marginBottom:8}}>📭</div><div style={{fontSize:14,color:C.sub}}>분석 기록이 없어요</div></Card>}
+          {history.map(item=>(
+            <Card key={item.id} style={{cursor:"pointer"}} onClick={()=>setViewItem(item)}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:700,color:C.text}}>{item.stockName}</div>
+                  <div style={{fontSize:11,color:C.sub,marginTop:2}}>{item.date} {item.time}</div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{textAlign:"center"}}><div style={{fontSize:20,fontWeight:900,color:ngc(item.score)}}>{item.score}</div><Badge color={ngc(item.score)}>{ngr(item.score)}</Badge></div>
+                  <button onClick={(e)=>{e.stopPropagation();deleteHistory(item.id);}} style={{background:C.red+"22",border:"none",borderRadius:8,padding:"6px 8px",color:C.red,fontSize:12,cursor:"pointer"}}>🗑</button>
+                </div>
+              </div>
+              {item.verdict&&<div style={{marginTop:8,fontSize:12,color:C.sub,padding:"6px 10px",background:C.card2,borderRadius:8}}>{item.verdict}</div>}
+            </Card>
+          ))}
+        </div>
+        <BottomNav tab={tab} setTab={setTab} historyCount={historyCount}/>
+      </div>
+    );
+  }
+
+  // ─── fallback ───
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
